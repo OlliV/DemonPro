@@ -33,12 +33,13 @@ tresult PLUGIN_API DemonProProcessor::initialize (FUnknown* context)
     }
 
     //--- create Audio IO ------
-    addAudioInput(STR16("Stereo In"), Steinberg::Vst::SpeakerArr::kStereo);
-    addAudioOutput(STR16("Stereo Out"), Steinberg::Vst::SpeakerArr::kStereo);
+    addAudioInput(STR16("Mono In"), Steinberg::Vst::SpeakerArr::kMono);
+    addAudioOutput(STR16("Mono Out"), Steinberg::Vst::SpeakerArr::kMono);
 
     /*
      * We want to grab MIDI CC events from the channel 2 so we need to add
      * two channels and the channel 2 will be in index 2.
+     * TODO Any needed?
      */
     addEventInput(STR16("Event In"), 2);
 
@@ -56,9 +57,6 @@ tresult PLUGIN_API DemonProProcessor::setActive (TBool state)
 	//--- called when the Plug-in is enable/disable (On/Off) -----
     if (state) {
         float sampleRate = (float)this->processSetup.sampleRate;
-
-        vuIn.setSampleRate(sampleRate);
-        vuOut.setSampleRate(sampleRate);
 
         dees32.updateParams(sampleRate);
         dees32.reset();
@@ -287,23 +285,6 @@ void DemonProProcessor::handleParamChanges(IParameterChanges* paramChanges)
             }
         }
     }
-
-    if (compChanged) {
-        float sampleRate = (float)this->processSetup.sampleRate;
-
-        comp32.updateParams(sampleRate);
-        comp64.updateParams(sampleRate);
-    }
-    if (deesChanged) {
-        float sampleRate = (float)this->processSetup.sampleRate;
-
-        dees32.updateParams(sampleRate);
-        dees64.updateParams(sampleRate);
-    }
-    if (exctChanged) {
-        exct32.updateParams();
-        exct64.updateParams();
-    }
 }
 
 tresult PLUGIN_API DemonProProcessor::process (Vst::ProcessData& data)
@@ -320,110 +301,45 @@ tresult PLUGIN_API DemonProProcessor::process (Vst::ProcessData& data)
      * Processing
      */
 
-    if (data.numInputs == 0 || data.numOutputs == 0) {
+    if (data.numInputs != 1 || data.numOutputs != 1) {
         return kResultOk;
     }
 
-    int nrChannels = data.inputs[0].numChannels; // We assume that we have the same number of outputs
-    void** in = getChannelBuffersPointer(processSetup, data.inputs[0]);
-    void** out = getChannelBuffersPointer(processSetup, data.outputs[0]);
+    void* in = getChannelBuffersPointer(processSetup, data.inputs[0][0]);
+    void* out = getChannelBuffersPointer(processSetup, data.outputs[0][0]);
+    const int nrSamples = data.numSamples;
+    const size_t sampleFramesSize = getSampleFramesSizeInBytes(processSetup, nrSamples);
 
     if (data.inputs[0].silenceFlags) {
-        size_t sampleFramesSize = getSampleFramesSizeInBytes(processSetup, data.numSamples);
-
         data.outputs[0].silenceFlags = data.inputs[0].silenceFlags;
 
-        for (int i = 0; i < nrChannels; i++) {
-            if (in[i] != out[i]) {
-                memset(out[i], 0, sampleFramesSize);
-            }
+        if (in != out) {
+            memset(out, 0, sampleFramesSize);
         }
-
-        return kResultOk;
-    }
-
-    // Normally the output is not silenced
-    data.outputs[0].silenceFlags = 0;
-
-    /*
-     * We first copy the input bufs to the outputs if necessary.
-     */
-    size_t sampleFramesSize = getSampleFramesSizeInBytes(processSetup, data.numSamples);
-    for (int32 i = 0; i < nrChannels; i++) {
-        // in and out might point to the same buffer.
-        memmove(out[i], in[i], sampleFramesSize);
-    }
-
-    if (data.symbolicSampleSize == kSample32) {
-        int nrSamples = data.numSamples;
-
-        vuIn.process<Sample32>((Sample32**)in, nrChannels, nrSamples);
-
-        if (!bBypass) {
-            dees32.process((Sample32**)out, nrChannels, nrSamples);
-            comp32.process((Sample32**)out, nrChannels, nrSamples);
-            exct32.process((Sample32**)out, nrChannels, nrSamples);
-            processGain<Sample32>((Sample32**)out, nrChannels, nrSamples, fGain);
-        }
-
-        vuOut.process<Sample32>((Sample32**)out, nrChannels, nrSamples);
     } else {
-        int nrSamples = data.numSamples;
+        // Normally the output is not silenced
+        data.outputs[0].silenceFlags = 0;
 
-        vuIn.process<Sample64>((Sample64**)in, nrChannels, nrSamples);
+        if (bBypass) {
+            memmove(out, in, sampleFramesSize);
+        } else {
+            void *buf;
 
-        if (!bBypass) {
-            dees64.process((Sample64**)out, nrChannels, nrSamples);
-            comp64.process((Sample64**)out, nrChannels, nrSamples);
-            exct64.process((Sample64**)out, nrChannels, nrSamples);
-            processGain<Sample64>((Sample64**)out, nrChannels, nrSamples, fGain);
-        }
+            buf = malloc(sampleFramesSize);
+            if (!buf) {
+                return kResultFalse; // TODO Is this the right code?
+            }
 
-        vuOut.process<Sample64>((Sample64**)out, nrChannels, nrSamples);
-    }
+            for (int i = 0; i < 3) {
+                memcpy(buf, in, sampleFramesSize);
 
-    /*
-     * Write outputs parameter changes
-     */
-    IParameterChanges* outParamChanges = data.outputParameterChanges;
-    /* TODO should we check if VU values changed? */
-    if (outParamChanges) {
-        int32 index = 0;
-        IParamValueQueue* paramQueue;
-
-        paramQueue = outParamChanges->addParameterData(kVuPPMIn0Id, index);
-        if (paramQueue) {
-            paramQueue->addPoint(0, vuIn.vuPPM[0], index);
-        }
-
-        paramQueue = outParamChanges->addParameterData(kVuPPMIn1Id, index);
-        if (paramQueue) {
-            paramQueue->addPoint(0, vuIn.vuPPM[1], index);
-        }
-
-        paramQueue = outParamChanges->addParameterData(kVuPPMOut0Id, index);
-        if (paramQueue) {
-            paramQueue->addPoint(0, vuOut.vuPPM[0], index);
-        }
-
-        paramQueue = outParamChanges->addParameterData(kVuPPMOut1Id, index);
-        if (paramQueue) {
-            paramQueue->addPoint(0, vuOut.vuPPM[1], index);
-        }
-
-        paramQueue = outParamChanges->addParameterData(kCompGrMeter0Id, index);
-        if (paramQueue) {
-            paramQueue->addPoint(0, (data.symbolicSampleSize == kSample32) ? comp32.gr_meter[0] : comp64.gr_meter[0], index);
-        }
-
-        paramQueue = outParamChanges->addParameterData(kCompGrMeter1Id, index);
-        if (paramQueue) {
-            paramQueue->addPoint(0, (data.symbolicSampleSize == kSample32) ? comp32.gr_meter[1] : comp64.gr_meter[1], index);
-        }
-
-        paramQueue = outParamChanges->addParameterData(kDeEsserActId, index);
-        if (paramQueue) {
-            paramQueue->addPoint(0, (data.symbolicSampleSize == kSample32) ? (Sample32)dees32.act : (Sample64)dees64.act, index);
+                // TODO Add hardcoded HPF?
+                if (data.symbolicSampleSize == kSample32) {
+                    demon32.process((Sample32*)buf, nrSamples);
+                } else {
+                    demon64.process((Sample64*)buf, nrSamples);
+                }
+            }
         }
     }
 
@@ -447,47 +363,19 @@ tresult PLUGIN_API DemonProProcessor::canProcessSampleSize (int32 symbolicSample
 tresult PLUGIN_API DemonProProcessor::setBusArrangements (Steinberg::Vst::SpeakerArrangement* inputs, int32 numIns,
                                                         Steinberg::Vst::SpeakerArrangement* outputs, int32 numOuts)
 {
-    if (numIns == 1 && numOuts == 1) {
-        // the host wants Mono => Mono (or 1 channel -> 1 channel)
-        if (Steinberg::Vst::SpeakerArr::getChannelCount(inputs[0]) == 1 &&
-            Steinberg::Vst::SpeakerArr::getChannelCount(outputs[0]) == 1) {
-            auto* bus = FCast<Steinberg::Vst::AudioBus>(audioInputs.at (0));
-            if (bus) {
-                // check if we are Mono => Mono, if not we need to recreate the busses
-                if (bus->getArrangement() != inputs[0]) {
-                    getAudioInput(0)->setArrangement(inputs[0]);
-                    getAudioInput(0)->setName(STR16("Mono In"));
-                    getAudioOutput(0)->setArrangement(inputs[0]);
-                    getAudioOutput(0)->setName (STR16("Mono Out"));
-                }
-                return kResultOk;
+    if (numIns == 1 && numOuts == 1 &&
+        Steinberg::Vst::SpeakerArr::getChannelCount(inputs[0]) == 1 &&
+        Steinberg::Vst::SpeakerArr::getChannelCount(outputs[0]) == 1) {
+        auto* bus = FCast<Steinberg::Vst::AudioBus>(audioInputs.at (0));
+        if (bus) {
+            // check if we are Mono => Mono, if not we need to recreate the busses
+            if (bus->getArrangement() != inputs[0]) {
+                getAudioInput(0)->setArrangement(inputs[0]);
+                getAudioInput(0)->setName(STR16("Mono In"));
+                getAudioOutput(0)->setArrangement(inputs[0]);
+                getAudioOutput(0)->setName (STR16("Mono Out"));
             }
-        } else {
-            // the host wants something else than Mono => Mono,
-            // in this case we are always Stereo => Stereo
-            auto* bus = FCast<Steinberg::Vst::AudioBus>(audioInputs.at (0));
-            if (bus) {
-                tresult result = kResultFalse;
-
-                // the host wants 2->2 (could be LsRs -> LsRs)
-                if (Steinberg::Vst::SpeakerArr::getChannelCount(inputs[0]) == 2 &&
-                    Steinberg::Vst::SpeakerArr::getChannelCount(outputs[0]) == 2) {
-                    getAudioInput (0)->setArrangement(inputs[0]);
-                    getAudioInput (0)->setName(STR16("Stereo In"));
-                    getAudioOutput (0)->setArrangement(outputs[0]);
-                    getAudioOutput (0)->setName(STR16("Stereo Out"));
-                    result = kResultTrue;
-                } else if (bus->getArrangement() != Steinberg::Vst::SpeakerArr::kStereo) {
-                    // the host want something different than 1->1 or 2->2 : in this case we want stereo
-                    getAudioInput (0)->setArrangement(Steinberg::Vst::SpeakerArr::kStereo);
-                    getAudioInput (0)->setName(STR16("Stereo In"));
-                    getAudioOutput (0)->setArrangement(Steinberg::Vst::SpeakerArr::kStereo);
-                    getAudioOutput (0)->setName(STR16("Stereo Out"));
-                    result = kResultFalse;
-                }
-
-                return result;
-            }
+            return kResultOk;
         }
     }
     return kResultFalse;
@@ -503,95 +391,13 @@ tresult PLUGIN_API DemonProProcessor::setState (IBStream* state)
 	IBStreamer streamer(state, kLittleEndian);
 
     int32 savedBypass = 0;
-    float savedGain = 0;
-    float savedCompThresh = 0;
-    float savedComAttime = 0;
-    float savedCompReltime = 0;
-    float savedCompRatio = 0;
-    float savedCompKnee = 0;
-    float savedCompMakeup = 0;
-    float savedCompMix = 0;
-    float savedCompLookAhead = 0;
-    int32 savedCompStereoLink = 0;
-    int32 savedCompEnabled = 0;
-    float savedDeEsserThresh = 0;
-    float savedDeEsserFreq = 0;
-    float savedDeEsserDrive = 0;
-    int32 savedDeEsserEnabled = 0;
-    float savedExciterDrive = 0;
-    float savedExciterFc = 0;
-    float savedExciterSat = 0;
-    float savedExciterBlend = 0;
-    int32 savedExciterEnabled = 0;
 
-    if (!streamer.readInt32(savedBypass) ||
-        !streamer.readFloat(savedGain) ||
-        !streamer.readFloat(savedCompThresh) ||
-        !streamer.readFloat(savedComAttime) ||
-        !streamer.readFloat(savedCompReltime) ||
-        !streamer.readFloat(savedCompRatio) ||
-        !streamer.readFloat(savedCompKnee) ||
-        !streamer.readFloat(savedCompMakeup) ||
-        !streamer.readFloat(savedCompMix) ||
-        !streamer.readFloat(savedCompLookAhead) ||
-        !streamer.readInt32(savedCompStereoLink) ||
-        !streamer.readInt32(savedCompEnabled) ||
-        !streamer.readFloat(savedDeEsserThresh) ||
-        !streamer.readFloat(savedDeEsserFreq) ||
-        !streamer.readFloat(savedDeEsserDrive) ||
-        !streamer.readInt32(savedDeEsserEnabled) ||
-        !streamer.readFloat(savedExciterDrive) ||
-        !streamer.readFloat(savedExciterFc) ||
-        !streamer.readFloat(savedExciterSat) ||
-        !streamer.readFloat(savedExciterBlend) ||
-        !streamer.readInt32(savedExciterEnabled)
-    ) {
+    if (!streamer.readInt32(savedBypass)) {
             return kResultFalse;
     }
 
     bBypass = savedBypass > 0;
-    fGain = savedGain;
-
     float sampleRate = (float)this->processSetup.sampleRate;
-
-    vuIn.setSampleRate(sampleRate);
-    vuOut.setSampleRate(sampleRate);
-
-    comp32.thresh = savedCompThresh;
-    comp32.attime = savedComAttime;
-    comp32.reltime = savedCompReltime;
-    comp32.ratio = savedCompRatio;
-    comp32.knee = savedCompKnee;
-    comp32.makeup = savedCompMakeup;
-    comp32.mix = savedCompMix;
-    comp32.lookahead = savedCompLookAhead;
-    comp32.stereo_link = savedCompStereoLink;
-    comp32.enabled = savedCompEnabled;
-    comp32.updateParams(sampleRate);
-
-    comp64.thresh = savedCompThresh;
-    comp64.attime = savedComAttime;
-    comp64.reltime = savedCompReltime;
-    comp64.ratio = savedCompRatio;
-    comp64.knee = savedCompKnee;
-    comp64.makeup = savedCompMakeup;
-    comp64.mix = savedCompMix;
-    comp64.lookahead = savedCompLookAhead;
-    comp64.stereo_link = savedCompStereoLink;
-    comp64.enabled = savedCompEnabled;
-    comp64.updateParams(sampleRate);
-
-    dees32.thresh = savedDeEsserThresh;
-    dees32.freq = savedDeEsserFreq;
-    dees32.drive = savedDeEsserDrive;
-    dees32.enabled = savedDeEsserEnabled;
-    dees32.updateParams(sampleRate);
-
-    dees64.thresh = savedDeEsserThresh;
-    dees64.freq = savedDeEsserFreq;
-    dees64.drive = savedDeEsserDrive;
-    dees64.enabled = savedDeEsserEnabled;
-    dees64.updateParams(sampleRate);
 
     exct32.drive = savedExciterDrive;
     exct32.fc = savedExciterFc;
@@ -616,30 +422,10 @@ tresult PLUGIN_API DemonProProcessor::getState (IBStream* state)
 	IBStreamer streamer (state, kLittleEndian);
 
     /*
-     * YOLO, we just write the sate in the right order here
+     * YOLO, we just write the state in the right order here
      * and hope it goes well.
      */
     streamer.writeInt32(bBypass ? 1 : 0);
-    streamer.writeFloat(fGain);
-    streamer.writeFloat(comp32.thresh);
-    streamer.writeFloat(comp32.attime);
-    streamer.writeFloat(comp32.reltime);
-    streamer.writeFloat(comp32.ratio);
-    streamer.writeFloat(comp32.knee);
-    streamer.writeFloat(comp32.makeup);
-    streamer.writeFloat(comp32.mix);
-    streamer.writeFloat(comp32.lookahead);
-    streamer.writeInt32(comp32.stereo_link ? 1 : 0);
-    streamer.writeInt32(comp32.enabled ? 1 : 0);
-    streamer.writeFloat(dees32.thresh);
-    streamer.writeFloat(dees32.freq);
-    streamer.writeFloat(dees32.drive);
-    streamer.writeInt32(dees32.enabled ? 1 : 0);
-    streamer.writeFloat(exct32.drive);
-    streamer.writeFloat(exct32.fc);
-    streamer.writeFloat(exct32.sat);
-    streamer.writeFloat(exct32.blend);
-    streamer.writeInt32(exct32.enabled ? 1 : 0);
 
 	return kResultOk;
 }

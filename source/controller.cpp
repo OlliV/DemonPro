@@ -87,28 +87,7 @@ tresult PLUGIN_API DemonProController::initialize (FUnknown* context)
     // compressor
     unitInfo.id = DemonProCompressorUnitId;
     unitInfo.parentUnitId = kRootUnitId; // attached to the root unit
-    Steinberg::UString(unitInfo.name, USTRINGSIZE(unitInfo.name)).assign(USTRING("Compressor"));
-    unitInfo.programListId = kNoProgramListId;
-    addUnit(new Unit(unitInfo));
-
-    // de-esser
-    unitInfo.id = DemonProDeEsserUnitId;
-    unitInfo.parentUnitId = kRootUnitId; // attached to the root unit
-    Steinberg::UString(unitInfo.name, USTRINGSIZE(unitInfo.name)).assign(USTRING("De-Esser"));
-    unitInfo.programListId = kNoProgramListId;
-    addUnit(new Unit(unitInfo));
-
-    // exciter
-    unitInfo.id = DemonProExciterUnitId;
-    unitInfo.parentUnitId = kRootUnitId; // attached to the root unit
-    Steinberg::UString(unitInfo.name, USTRINGSIZE(unitInfo.name)).assign(USTRING("Exciter"));
-    unitInfo.programListId = kNoProgramListId;
-    addUnit(new Unit(unitInfo));
-
-    // output
-    unitInfo.id = DemonProOutputUnitId;
-    unitInfo.parentUnitId = kRootUnitId; // attached to the root unit
-    Steinberg::UString(unitInfo.name, USTRINGSIZE(unitInfo.name)).assign(USTRING("Output"));
+    Steinberg::UString(unitInfo.name, USTRINGSIZE(unitInfo.name)).assign(USTRING("Demon"));
     unitInfo.programListId = kNoProgramListId;
     addUnit(new Unit(unitInfo));
 
@@ -118,192 +97,13 @@ tresult PLUGIN_API DemonProController::initialize (FUnknown* context)
     param = parameters.addParameter(STR16("Bypass"), nullptr, stepCountToggle, defaultVal, flags, kBypassId);
     param->setUnitID(DemonProRootUnitId);
 
-    addVuMeters();
-    addGrMeters();
-
-    // Comp thresh
-    param = new GainParameter("Compressor Threshold", ParameterInfo::kCanAutomate, kCompThreshId, COMP_THRESH_MIN, COMP_THRESH_MAX);
-    param->setNormalized(COMP_THRESH_DEFAULT_N);
-    param->setPrecision(2);
-    param->setUnitID(DemonProCompressorUnitId);
-    parameters.addParameter(param);
-
-    // Comp ratio
-    param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Compressor Ratio"), USTRING(":1"), 0, COMP_RATIO_DEFAULT_N, ParameterInfo::kCanAutomate, kCompRatioId, COMP_RATIO_MIN, COMP_RATIO_MAX);
-    param->setNormalized(COMP_RATIO_DEFAULT_N);
-    param->setPrecision(1);
-    param->setUnitID(DemonProCompressorUnitId);
-    parameters.addParameter(param);
-
-    // Comp knee
-	param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Compressor Knee"), USTRING(""), 0, COMP_KNEE_DEFAULT_N, ParameterInfo::kCanAutomate, kCompKneeId, COMP_KNEE_MIN, COMP_KNEE_MAX);
-    param->setNormalized(COMP_KNEE_DEFAULT_N);
-    param->setPrecision(2);
-	param->setUnitID(DemonProCompressorUnitId);
-    parameters.addParameter(param);
-
-    // Comp attack
-	param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Compressor Attack"), USTRING("msec"), 0, COMP_ATTIME_DEFAULT_N, ParameterInfo::kCanAutomate, kCompAttimeId, COMP_ATTIME_MIN, COMP_ATTIME_MAX);
-    param->setNormalized(COMP_ATTIME_DEFAULT_N);
-    param->setPrecision(0);
-	param->setUnitID(DemonProCompressorUnitId);
-    parameters.addParameter(param);
-
-    // Comp release
-	param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Compressor Release"), USTRING("msec"), 0, COMP_RELTIME_DEFAULT_N, ParameterInfo::kCanAutomate, kCompReltimeId, COMP_RELTIME_MIN, COMP_RELTIME_MAX);
-    param->setNormalized(COMP_RELTIME_DEFAULT_N);
-    param->setPrecision(0);
-	param->setUnitID(DemonProCompressorUnitId);
-    parameters.addParameter(param);
-
-    // Comp gain parameter
-    param = new GainParameter("Compressor Makeup Gain", ParameterInfo::kCanAutomate, kCompMakeupId, COMP_MAKEUP_MIN, COMP_MAKEUP_MAX);
-    param->setPrecision(2);
-    param->setUnitID(DemonProCompressorUnitId);
-    parameters.addParameter(param);
-
-    // Comp mix
-	param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Compressor Mix"), USTRING(":1"), 0.0f, 1.0f, ParameterInfo::kCanAutomate, kCompMixId);
-    param->setNormalized(COMP_MIX_DEFAULT_N);
-    param->setPrecision(2);
-	param->setUnitID(DemonProCompressorUnitId);
-    parameters.addParameter(param);
-
-    // Comp look-ahead
-	param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Compressor Look-Ahead"), USTRING("msec"), 0, COMP_LOOKAHEAD_DEFAULT_N, ParameterInfo::kCanAutomate, kCompLookAheadId, COMP_LOOKAHEAD_MIN, COMP_LOOKAHEAD_MAX);
-    param->setNormalized(COMP_LOOKAHEAD_DEFAULT_N);
-    param->setPrecision(0);
-	param->setUnitID(DemonProCompressorUnitId);
-    parameters.addParameter(param);
-
-    // Comp stereo link
-    parameters.addParameter(STR16("Compressor Stereo Link"), // title
-                            STR16("On/Off"), // units
-                            stepCountToggle,
-                            0, // defaultNormalizedValue
-                            Vst::ParameterInfo::kCanAutomate, // flags
-                            kCompStereoLinkId, // tag
-                            DemonProCompressorUnitId, // unitID
-                            STR16("CompStereoLink")); // shortTitle
-
-    // Comp enable
-    parameters.addParameter(STR16("Enable Compressor"), // title
-                            STR16("On/Off"), // units
-                            stepCountToggle,
-                            1, // defaultNormalizedValue
-                            Vst::ParameterInfo::kCanAutomate, // flags
-                            kCompEnabledId, // tag
-                            DemonProCompressorUnitId, // unitID
-                            STR16("EnComp")); // shortTitle
-
-
-    // De-esser threshold
-    param = new GainParameter("De-esser Threshold", ParameterInfo::kCanAutomate, kDeEsserThreshId, DEESSER_THRESH_MIN, DEESSER_THRESH_MAX);
-    param->setPrecision(2);
-    param->setUnitID(DemonProDeEsserUnitId);
-    parameters.addParameter(param);
-
-    // De-esser freq
-	param = new Steinberg::Vst::mda::ScaledParameter(USTRING("De-esser Freq"), USTRING("Hz"), 0, DEESSER_FREQ_DEFAULT_N, ParameterInfo::kCanAutomate, kDeEsserFreqId, DEESSER_FREQ_MIN, DEESSER_FREQ_MAX);
-    param->setNormalized(DEESSER_FREQ_DEFAULT_N);
-    param->setPrecision(0);
-	param->setUnitID(DemonProDeEsserUnitId);
-    parameters.addParameter(param);
-
-    // De-esser drive
-    param = new GainParameter("De-esser Drive", ParameterInfo::kCanAutomate, kDeEsserDriveId, DEESSER_DRIVE_MIN, DEESSER_DRIVE_MAX);
-    param->setPrecision(2);
-    param->setUnitID(DemonProDeEsserUnitId);
-    parameters.addParameter(param);
-
-    // De-esser enable
-    parameters.addParameter(STR16("Enable De-Esser"), // title
-                            STR16("On/Off"), // units
-                            stepCountToggle,
-                            1, // defaultNormalizedValue
-                            Vst::ParameterInfo::kCanAutomate, // flags
-                            kDeEsserEnabledId, // tag
-                            DemonProDeEsserUnitId, // unitID
-                            STR16("EnDeEsser")); // shortTitle
-
-    // De-esser act led
-    param = parameters.addParameter(STR16("DeEsserAct"), nullptr, 0, 0, ParameterInfo::kIsReadOnly, kDeEsserActId);
-    param->setUnitID(DemonProDeEsserUnitId);
-
-
-    // Exciter drive
-    param = new GainParameter("Exciter Drive", ParameterInfo::kCanAutomate, kExciterDriveId, EXCITER_DRIVE_MIN, EXCITER_DRIVE_MAX);
-    param->setPrecision(2);
-    param->setUnitID(DemonProExciterUnitId);
-    parameters.addParameter(param);
-
-    // Exciter fc
-	param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Exciter fc"), USTRING("Hz"), 0, EXCITER_FC_DEFAULT_N, ParameterInfo::kCanAutomate, kExciterFcId, EXCITER_FC_MIN, EXCITER_FC_MAX);
-    param->setNormalized(EXCITER_FC_DEFAULT_N);
-    param->setPrecision(0);
-	param->setUnitID(DemonProExciterUnitId);
-    parameters.addParameter(param);
-
-    // Exciter saturation
-    param = new GainParameter("Exciter Saturation", ParameterInfo::kCanAutomate, kExciterSatId, EXCITER_SAT_MIN, EXCITER_SAT_MAX);
-    param->setPrecision(2);
-    param->setUnitID(DemonProExciterUnitId);
-    parameters.addParameter(param);
-
-    // Exciter blend
-    param = new GainParameter("Exciter Blend", ParameterInfo::kCanAutomate, kExciterBlendId, EXCITER_BLEND_MIN, EXCITER_BLEND_MAX);
-    param->setPrecision(2);
-    param->setUnitID(DemonProExciterUnitId);
-    parameters.addParameter(param);
-
-    // Exciter enable
-    parameters.addParameter(STR16("Enable Exciter"), // title
-                            STR16("On/Off"), // units
-                            stepCountToggle,
-                            1, // defaultNormalizedValue
-                            Vst::ParameterInfo::kCanAutomate, // flags
-                            kExciterEnabledId, // tag
-                            DemonProExciterUnitId, // unitID
-                            STR16("EnExciter")); // shortTitle
-
-
     // Output Gain parameter
-    param = new GainParameter("Gain", ParameterInfo::kCanAutomate, kGainId, GAIN_MIN, GAIN_MAX);
-    param->setPrecision(2);
-    param->setUnitID(DemonProOutputUnitId);
-    parameters.addParameter(param);
+    //param = new GainParameter("Gain", ParameterInfo::kCanAutomate, kGainId, GAIN_MIN, GAIN_MAX);
+    //param->setPrecision(2);
+    //param->setUnitID(DemonProOutputUnitId);
+    //parameters.addParameter(param);
 
 	return result;
-}
-
-void DemonProController::addVuMeters(void)
-{
-    int32 stepCount = 0;
-    ParamValue defaultVal = 0;
-    int32 flags = ParameterInfo::kIsReadOnly;
-    Parameter *param;
-
-    param = parameters.addParameter(STR16("VuPPMIn0"), nullptr, stepCount, defaultVal, flags, kVuPPMIn0Id);
-    //param->setUnitID(4);
-    param = parameters.addParameter(STR16("VuPPMIn1"), nullptr, stepCount, defaultVal, flags, kVuPPMIn1Id);
-    //param->setUnitID(4);
-    param = parameters.addParameter(STR16("VuPPMOut0"), nullptr, stepCount, defaultVal, flags, kVuPPMOut0Id);
-    //param->setUnitID(4);
-    param = parameters.addParameter(STR16("VuPPMOut1"), nullptr, stepCount, defaultVal, flags, kVuPPMOut1Id);
-    //param->setUnitID(4);
-}
-
-void DemonProController::addGrMeters(void)
-{
-    int32 stepCount = 0;
-    ParamValue defaultVal = 0;
-    int32 flags = ParameterInfo::kIsReadOnly;
-    Parameter *param;
-
-    param = parameters.addParameter(STR16("CompGrMeter0"), nullptr, stepCount, defaultVal, flags, kCompGrMeter0Id);
-    //param->setUnitID(2);
-    param = parameters.addParameter(STR16("CompGrMeter1"), nullptr, stepCount, defaultVal, flags, kCompGrMeter1Id);
-    //param->setUnitID(2);
 }
 
 tresult PLUGIN_API DemonProController::terminate ()
@@ -342,28 +142,7 @@ tresult PLUGIN_API DemonProController::setComponentState (IBStream* state)
     float savedExciterBlend;
     int32 savedExciterEnabled;
 
-    if (!streamer.readInt32(savedBypass) ||
-        !streamer.readFloat(savedGain) ||
-        !streamer.readFloat(savedCompThresh) ||
-        !streamer.readFloat(savedCompAttime) ||
-        !streamer.readFloat(savedCompReltime) ||
-        !streamer.readFloat(savedCompRatio) ||
-        !streamer.readFloat(savedCompKnee) ||
-        !streamer.readFloat(savedCompMakeup) ||
-        !streamer.readFloat(savedCompMix) ||
-        !streamer.readFloat(savedCompLookAhead) ||
-        !streamer.readInt32(savedCompStereoLink) ||
-        !streamer.readInt32(savedCompEnabled) ||
-        !streamer.readFloat(savedDeEsserThresh) ||
-        !streamer.readFloat(savedDeEsserFreq) ||
-        !streamer.readFloat(savedDeEsserDrive) ||
-        !streamer.readInt32(savedDeEsserEnabled) ||
-        !streamer.readFloat(savedExciterDrive) ||
-        !streamer.readFloat(savedExciterFc) ||
-        !streamer.readFloat(savedExciterSat) ||
-        !streamer.readFloat(savedExciterBlend) ||
-        !streamer.readInt32(savedExciterEnabled)
-    ) {
+    if (!streamer.readInt32(savedBypass)) {
         return kResultFalse;
     }
 

@@ -51,11 +51,8 @@ public:
                                                       Steinberg::int32 numOuts) SMTG_OVERRIDE;
     Steinberg::uint32 PLUGIN_API getLatencySamples() override
     {
-        /*
-         * The compressor is applying a delay even when it's turned off.
-         */
-        return comp32.get_nlookahead();
-    }
+        return 0;
+    }V
 	Steinberg::tresult PLUGIN_API process (Steinberg::Vst::ProcessData& data) SMTG_OVERRIDE;
 
 	/** For persistence */
@@ -63,20 +60,7 @@ public:
 	Steinberg::tresult PLUGIN_API getState (Steinberg::IBStream* state) SMTG_OVERRIDE;
 
 protected:
-    template <typename SampleType>
-    void processGain (SampleType** inOut, int nrChannels, int nrSamples, float gain);
-
-    template <typename SampleType>
-    void processCompressor (SampleType** inOut, int nrChannels, int nrSamples);
-
     void handleParamChanges(Steinberg::Vst::IParameterChanges* paramChanges);
-
-    /*
-     * Gain
-     * Nobody, neither the controller, will pass this if nothing is save, therefore we
-     * default it here.
-     */
-	float fGain = GAIN_DEFAULT_N;
 
     DeEsser    <Sample32> dees32;
     DeEsser    <Sample64> dees64;
@@ -84,12 +68,6 @@ protected:
     Compressor <Sample64> comp64;
     Exciter    <Sample32> exct32;
     Exciter    <Sample64> exct64;
-
-    // VU
-    VU vuIn;
-    VU vuOut;
-	float fVuPPMInOld[2];
-	float fVuPPMOutOld[2];
 
     bool bBypass {false};
 };
