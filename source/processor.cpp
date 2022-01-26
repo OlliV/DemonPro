@@ -32,6 +32,37 @@ tresult PLUGIN_API DemonProProcessor::initialize (FUnknown* context)
         return result;
     }
 
+    demon32[0].gain = DEMON0_GAIN_DEFAULT_N;
+    demon32[0].pitch = DEMON0_PITCH_DEFAULT_N;
+    demon32[0].boostGain = DEMON0_BOOST_GAIN_DEFAULT_N;
+    demon32[0].boostFc = DEMON0_BOOST_FC_DEFAULT_N;
+    demon32[0].blend = DEMON0_BLEND_DEFAULT_N;
+    demon32[1].gain = DEMON1_GAIN_DEFAULT_N;
+    demon32[1].pitch = DEMON1_PITCH_DEFAULT_N;
+    demon32[1].boostGain = DEMON1_BOOST_GAIN_DEFAULT_N;
+    demon32[1].boostFc = DEMON1_BOOST_FC_DEFAULT_N;
+    demon32[1].blend = DEMON1_BLEND_DEFAULT_N;
+    demon32[2].gain = DEMON2_GAIN_DEFAULT_N;
+    demon32[2].pitch = DEMON2_PITCH_DEFAULT_N;
+    demon32[2].boostGain = DEMON2_BOOST_GAIN_DEFAULT_N;
+    demon32[2].boostFc = DEMON2_BOOST_FC_DEFAULT_N;
+    demon32[2].blend = DEMON2_BLEND_DEFAULT_N;
+    demon64[0].gain = DEMON0_GAIN_DEFAULT_N;
+    demon64[0].pitch = DEMON0_PITCH_DEFAULT_N;
+    demon64[0].boostGain = DEMON0_BOOST_GAIN_DEFAULT_N;
+    demon64[0].boostFc = DEMON0_BOOST_FC_DEFAULT_N;
+    demon64[0].blend = DEMON0_BLEND_DEFAULT_N;
+    demon64[1].gain = DEMON1_GAIN_DEFAULT_N;
+    demon64[1].pitch = DEMON1_PITCH_DEFAULT_N;
+    demon64[1].boostGain = DEMON1_BOOST_GAIN_DEFAULT_N;
+    demon64[1].boostFc = DEMON1_BOOST_FC_DEFAULT_N;
+    demon64[1].blend = DEMON1_BLEND_DEFAULT_N;
+    demon64[2].gain = DEMON2_GAIN_DEFAULT_N;
+    demon64[2].pitch = DEMON2_PITCH_DEFAULT_N;
+    demon64[2].boostGain = DEMON2_BOOST_GAIN_DEFAULT_N;
+    demon64[2].boostFc = DEMON2_BOOST_FC_DEFAULT_N;
+    demon64[2].blend = DEMON2_BLEND_DEFAULT_N;
+
     //--- create Audio IO ------
     addAudioInput(STR16("Mono In"), Steinberg::Vst::SpeakerArr::kMono);
     addAudioOutput(STR16("Mono Out"), Steinberg::Vst::SpeakerArr::kMono);
@@ -58,32 +89,13 @@ tresult PLUGIN_API DemonProProcessor::setActive (TBool state)
     if (state) {
         float sampleRate = (float)this->processSetup.sampleRate;
 
-        dees32.updateParams(sampleRate);
-        dees32.reset();
-        comp32.updateParams(sampleRate);
-        comp32.reset();
-
-        dees64.updateParams(sampleRate);
-        dees64.reset();
-        comp64.updateParams(sampleRate);
-        comp64.reset();
-
-        /*
-         * Note that the initialization order is different from the other
-         * effect processors.
-         */
-        exct32.reset(sampleRate);
-        exct32.updateParams();
-
-        exct64.reset(sampleRate);
-        exct64.updateParams();
+        for (int i = 3; i < 3; i++) {
+            demon32[i].reset(sampleRate);
+            demon32[i].updateParams();
+            demon64[i].reset(sampleRate);
+            demon64[i].updateParams();
+        }
     }
-
-    /*
-     * Reset VU
-     */
-    memset(fVuPPMInOld, 0, sizeof(fVuPPMInOld));
-    memset(fVuPPMOutOld, 0, sizeof(fVuPPMOutOld));
 
 	return AudioEffect::setActive (state);
 }
@@ -106,183 +118,125 @@ void DemonProProcessor::handleParamChanges(IParameterChanges* paramChanges)
 			}
 		}
 	}*/
-	int32 numParamsChanged = paramChanges->getParameterCount ();
-    bool compChanged = false;
-    bool deesChanged = false;
-    bool exctChanged = false;
+	int32 numParamsChanged = paramChanges->getParameterCount();
 
-    // for each parameter which are some changes in this audio block:
-    for (int32 i = 0; i < numParamsChanged; i++) {
-        IParamValueQueue* paramQueue = paramChanges->getParameterData(i);
-		if (paramQueue) {
-			ParamValue value;
-            int32 sampleOffset;
-            int32 numPoints = paramQueue->getPointCount();
+    if (numParamsChanged) {
+        // for each parameter which are some changes in this audio block:
+        for (int32 i = 0; i < numParamsChanged; i++) {
+            IParamValueQueue* paramQueue = paramChanges->getParameterData(i);
+            if (paramQueue) {
+                ParamValue value;
+                int32 sampleOffset;
+                int32 numPoints = paramQueue->getPointCount();
 
-            switch (paramQueue->getParameterId ()) {
-                case kBypassId:
-                    if (paramQueue->getPoint (numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        bBypass = value > 0.5f;
-                    }
-                    break;
+                switch (paramQueue->getParameterId()) {
+                    case kBypassId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            bBypass = value > 0.5f;
+                        }
+                        break;
 
-                case kGainId:
-                    // we use in this example only the last point of the queue.
-                    // in some wanted case for specific kind of parameter it makes sense to
-                    // retrieve all points and process the whole audio block in small blocks.
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        fGain = value;
-                    }
-                    break;
+                    case kDemon0GainId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[0].gain = value;
+                            demon64[0].gain = value;
+                        }
+                        break;
+                    case kDemon1GainId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[1].gain = value;
+                            demon64[1].gain = value;
+                        }
+                        break;
+                    case kDemon2GainId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[2].gain = value;
+                            demon64[2].gain = value;
+                        }
+                        break;
 
-                case kCompThreshId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.thresh = value;
-                        comp64.thresh = value;
-                        compChanged = true;
-                    }
-                    break;
+                    case kDemon0PitchId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[0].pitch = value;
+                            demon64[0].pitch = value;
+                        }
+                        break;
+                    case kDemon1PitchId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[1].pitch = value;
+                            demon64[1].pitch = value;
+                        }
+                        break;
+                    case kDemon2PitchId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[2].pitch = value;
+                            demon64[2].pitch = value;
+                        }
+                        break;
 
-                case kCompAttimeId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.attime = value;
-                        comp64.attime = value;
-                        compChanged = true;
-                    }
-                    break;
+                    case kDemon0BoostGainId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[0].boostGain = value;
+                            demon64[0].boostGain = value;
+                        }
+                        break;
+                    case kDemon1BoostGainId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[1].boostGain = value;
+                            demon64[1].boostGain = value;
+                        }
+                        break;
+                    case kDemon2BoostGainId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[2].boostGain = value;
+                            demon64[2].boostGain = value;
+                        }
+                        break;
 
-                case kCompReltimeId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.reltime = value;
-                        comp64.reltime = value;
-                        compChanged = true;
-                    }
-                    break;
+                    case kDemon0BoostFcId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[0].boostFc = value;
+                            demon64[0].boostFc = value;
+                        }
+                        break;
+                    case kDemon0BoostFcId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[1].boostFc = value;
+                            demon64[1].boostFc = value;
+                        }
+                        break;
+                    case kDemon2BoostFcId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[2].boostFc = value;
+                            demon64[2].boostFc = value;
+                        }
+                        break;
 
-                case kCompRatioId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.ratio = value;
-                        comp64.ratio = value;
-                        compChanged = true;
-                    }
-                    break;
-
-                case kCompKneeId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.knee = value;
-                        comp64.knee = value;
-                        compChanged = true;
-                    }
-                    break;
-
-                case kCompMakeupId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.makeup = value;
-                        comp64.makeup = value;
-                        compChanged = true;
-                    }
-                    break;
-
-                case kCompMixId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.mix = value;
-                        comp64.mix = value;
-                        compChanged = true;
-                    }
-                    break;
-
-                case kCompLookAheadId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.lookahead = value;
-                        comp64.lookahead = value;
-                        compChanged = true;
-                    }
-                    break;
-
-                case kCompStereoLinkId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.stereo_link = value > 0.5f;
-                        comp64.stereo_link = value > 0.5f;
-                    }
-                    break;
-
-                case kCompEnabledId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        comp32.enabled = value > 0.5f;
-                        comp64.enabled = value > 0.5f;
-                    }
-                    break;
-
-                case kDeEsserThreshId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        dees32.thresh = value;
-                        dees64.thresh = value;
-                        deesChanged = true;
-                    }
-                    break;
-
-                case kDeEsserFreqId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        dees32.freq = value;
-                        dees64.freq = value;
-                        deesChanged = true;
-                    }
-                    break;
-
-                case kDeEsserDriveId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        dees32.drive = value;
-                        dees64.drive = value;
-                        deesChanged = true;
-                    }
-                    break;
-
-                case kDeEsserEnabledId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        dees32.enabled = value > 0.5f;
-                        dees64.enabled = value > 0.5f;
-                    }
-                    break;
-
-                case kExciterDriveId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        exct32.drive = value;
-                        exct64.drive = value;
-                        exctChanged = true;
-                    }
-                    break;
-
-                case kExciterFcId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        exct32.fc = value;
-                        exct64.fc = value;
-                        exctChanged = true;
-                    }
-                    break;
-
-                case kExciterSatId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        exct32.sat = value;
-                        exct64.sat = value;
-                        exctChanged = true;
-                    }
-                    break;
-
-                case kExciterBlendId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        exct32.blend = value;
-                        exct64.blend = value;
-                        exctChanged = true;
-                    }
-                    break;
-
-                case kExciterEnabledId:
-                    if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
-                        exct32.enabled = value > 0.5f;
-                        exct64.enabled = value > 0.5f;
-                    }
-                    break;
+                    case kDemon0BlendId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[0].blend = value;
+                            demon64[0].blend = value;
+                        }
+                        break;
+                    case kDemon1BlendId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[1].blend = value;
+                            demon64[1].blend = value;
+                        }
+                        break;
+                    case kDemon2BlendId:
+                        if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+                            demon32[2].blend = value;
+                            demon64[2].blend = value;
+                        }
+                        break;
+                }
             }
+        }
+
+        for (int i = 0; i < 3; i++) {
+            demon32[i].updateParams();
+            demon64[i].updateParams();
         }
     }
 }
@@ -330,16 +284,33 @@ tresult PLUGIN_API DemonProProcessor::process (Vst::ProcessData& data)
                 return kResultFalse; // TODO Is this the right code?
             }
 
-            for (int i = 0; i < 3) {
-                memcpy(buf, in, sampleFramesSize);
+            memset(out, 0, sampleFramesSize);
 
-                // TODO Add hardcoded HPF?
-                if (data.symbolicSampleSize == kSample32) {
-                    demon32.process((Sample32*)buf, nrSamples);
-                } else {
-                    demon64.process((Sample64*)buf, nrSamples);
+            if (data.symbolicSampleSize == kSample32) {
+                for (int i = 0; i < 3) {
+                    memcpy(buf, in, sampleFramesSize);
+
+                    // TODO Add hardcoded HPF?
+                    demon32[i].process((Sample32*)buf, nrSamples);
+
+                    for (int n = 0; n < nrSamples; n++) {
+                        ((Sample32*)out)[n] += ((Sample32*)buf)[n] / 3.0f;
+                    }
+                }
+            } else {
+                for (int i = 0; i < 3) {
+                    memcpy(buf, in, sampleFramesSize);
+
+                    // TODO Add hardcoded HPF?
+                    demon64[i].process((Sample64*)buf, nrSamples);
+
+                    for (int n = 0; n < nrSamples; n++) {
+                        ((Sample64*)out)[n] += ((Sample64*)buf)[n] / 3.0f;
+                    }
                 }
             }
+
+            free(buf);
         }
     }
 
@@ -397,21 +368,38 @@ tresult PLUGIN_API DemonProProcessor::setState (IBStream* state)
     }
 
     bBypass = savedBypass > 0;
+
     float sampleRate = (float)this->processSetup.sampleRate;
 
-    exct32.drive = savedExciterDrive;
-    exct32.fc = savedExciterFc;
-    exct32.sat = savedExciterSat;
-    exct32.blend = savedExciterBlend;
-    exct32.enabled = savedExciterEnabled;
-    exct32.updateParams();
+    for (int i = 0; i < 3; i++) {
+        float gain;
+        float pitch;
+        float boostGain;
+        float boostFc;
+        float blend;
 
-    exct64.drive = savedExciterDrive;
-    exct64.fc = savedExciterFc;
-    exct64.sat = savedExciterSat;
-    exct64.blend = savedExciterBlend;
-    exct64.enabled = savedExciterEnabled;
-    exct64.updateParams();
+        if (!streamer.readFloat(gain) ||
+            !streamer.readFloat(pitch) ||
+            !streamer.readFloat(boostGain) ||
+            !streamer.readFloat(boostFc) ||
+            !streamer.readFloat(blend)) {
+            return kResultFalse;
+        }
+
+        demon32[i].gain = gain;
+        demon32[i].pitch = pitch;
+        demon32[i].boostGain = boostGain;
+        demon32[i].boostFc = boostFc;
+        demon32[i].blend = blend;
+        demon32[i].updateParams();
+
+        demon64[i].gain = gain;
+        demon64[i].pitch = pitch;
+        demon64[i].boostGain = boostGain;
+        demon64[i].boostFc = boostFc;
+        demon64[i].blend = blend;
+        demon64[i].updateParams();
+    }
 
 	return kResultOk;
 }

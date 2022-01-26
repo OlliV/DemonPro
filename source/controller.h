@@ -12,16 +12,12 @@ using namespace Steinberg::Vst;
 
 enum DemonProUnitId {
     DemonProRootUnitId = 0,
-    DemonProCompressorUnitId,
-    DemonProDeEsserUnitId,
-    DemonProExciterUnitId,
-    DemonProOutputUnitId,
+    DemonProDemon0UnitId,
+    DemonProDemon1UnitId,
+    DemonProDemon2UnitId,
     DemonProNrUnits
 };
 
-//------------------------------------------------------------------------
-//  DemonProController
-//------------------------------------------------------------------------
 class DemonProController : public EditControllerEx1, public IMidiMapping
 {
 public:
@@ -61,11 +57,6 @@ public:
         DEF_INTERFACE (IUnitInfo)
 	END_DEFINE_INTERFACES (EditController)
     DELEGATE_REFCOUNT (EditController)
-
-protected:
-private:
-    void addVuMeters(void);
-    void addGrMeters(void);
 };
 
 }

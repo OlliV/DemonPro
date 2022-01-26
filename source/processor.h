@@ -6,10 +6,7 @@
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include "paramids.h"
-#include "compressor.h"
-#include "deesser.h"
-#include "exciter.h"
-#include "vu.h"
+#include "demon.h"
 
 namespace MyVst {
 
@@ -52,7 +49,7 @@ public:
     Steinberg::uint32 PLUGIN_API getLatencySamples() override
     {
         return 0;
-    }V
+    }
 	Steinberg::tresult PLUGIN_API process (Steinberg::Vst::ProcessData& data) SMTG_OVERRIDE;
 
 	/** For persistence */
@@ -62,12 +59,8 @@ public:
 protected:
     void handleParamChanges(Steinberg::Vst::IParameterChanges* paramChanges);
 
-    DeEsser    <Sample32> dees32;
-    DeEsser    <Sample64> dees64;
-    Compressor <Sample32> comp32;
-    Compressor <Sample64> comp64;
-    Exciter    <Sample32> exct32;
-    Exciter    <Sample64> exct64;
+    Demon<Sample32> demon32[3];
+    Demon<Sample64> demon64[3];
 
     bool bBypass {false};
 };
