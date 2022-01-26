@@ -20,7 +20,7 @@ public:
 
     void updateParams(void);
     void reset(float sampleRate);
-    void process(SampleType** inOut, int nrChannels, int nrSamples);
+    void process(SampleType* buf, int nrSamples);
 private:
     struct {
         SampleType gain;
@@ -33,7 +33,7 @@ private:
 template <typename SampleType>
 void Demon<SampleType>::updateParams(void)
 {
-    cooked.gain = normdb2factor(drive, DEMON_GAIN_MIN, DEMON_GAIN_MAX);
+    cooked.gain = normdb2factor(gain, DEMON_GAIN_MIN, DEMON_GAIN_MAX);
 
     // Update vocoder params
     PSMVocoderParameters vocoder_params = vocoder.getParameters();

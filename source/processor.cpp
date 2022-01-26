@@ -3,7 +3,6 @@
 //------------------------------------------------------------------------
 
 #include "processor.h"
-#include "process.h"
 #include "cids.h"
 #include "paramids.h"
 
@@ -199,7 +198,7 @@ void DemonProProcessor::handleParamChanges(IParameterChanges* paramChanges)
                             demon64[0].boostFc = value;
                         }
                         break;
-                    case kDemon0BoostFcId:
+                    case kDemon1BoostFcId:
                         if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
                             demon32[1].boostFc = value;
                             demon64[1].boostFc = value;
@@ -259,8 +258,8 @@ tresult PLUGIN_API DemonProProcessor::process (Vst::ProcessData& data)
         return kResultOk;
     }
 
-    void* in = getChannelBuffersPointer(processSetup, data.inputs[0][0]);
-    void* out = getChannelBuffersPointer(processSetup, data.outputs[0][0]);
+    void* in = getChannelBuffersPointer(processSetup, data.inputs[0])[0];
+    void* out = getChannelBuffersPointer(processSetup, data.outputs[0])[0];
     const int nrSamples = data.numSamples;
     const size_t sampleFramesSize = getSampleFramesSizeInBytes(processSetup, nrSamples);
 
@@ -287,7 +286,7 @@ tresult PLUGIN_API DemonProProcessor::process (Vst::ProcessData& data)
             memset(out, 0, sampleFramesSize);
 
             if (data.symbolicSampleSize == kSample32) {
-                for (int i = 0; i < 3) {
+                for (int i = 0; i < 3; i++) {
                     memcpy(buf, in, sampleFramesSize);
 
                     // TODO Add hardcoded HPF?
@@ -298,7 +297,7 @@ tresult PLUGIN_API DemonProProcessor::process (Vst::ProcessData& data)
                     }
                 }
             } else {
-                for (int i = 0; i < 3) {
+                for (int i = 0; i < 3; i++) {
                     memcpy(buf, in, sampleFramesSize);
 
                     // TODO Add hardcoded HPF?
@@ -414,6 +413,14 @@ tresult PLUGIN_API DemonProProcessor::getState (IBStream* state)
      * and hope it goes well.
      */
     streamer.writeInt32(bBypass ? 1 : 0);
+
+    for (int i = 0; i < 3; i++) {
+        streamer.writeFloat(demon32[i].gain);
+        streamer.writeFloat(demon32[i].pitch);
+        streamer.writeFloat(demon32[i].boostGain);
+        streamer.writeFloat(demon32[i].boostFc);
+        streamer.writeFloat(demon32[i].blend);
+    }
 
 	return kResultOk;
 }

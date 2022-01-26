@@ -18,7 +18,7 @@ enum DemonProUnitId {
     DemonProNrUnits
 };
 
-class DemonProController : public EditControllerEx1, public IMidiMapping
+class DemonProController : public EditControllerEx1
 {
 public:
 	DemonProController () = default;
@@ -33,9 +33,6 @@ public:
 	// IPluginBase
 	Steinberg::tresult PLUGIN_API initialize (Steinberg::FUnknown* context) SMTG_OVERRIDE;
 	Steinberg::tresult PLUGIN_API terminate () SMTG_OVERRIDE;
-
-    //---IMidiMapping---------------------------
-    tresult PLUGIN_API getMidiControllerAssignment (int32 busIndex, int16 channel, CtrlNumber midiControllerNumber, ParamID& id) SMTG_OVERRIDE;
 
 	// EditController
 	Steinberg::tresult PLUGIN_API setComponentState (Steinberg::IBStream* state) SMTG_OVERRIDE;
@@ -53,7 +50,6 @@ public:
 
  	//---Interface---------
 	DEFINE_INTERFACES
-        DEF_INTERFACE (IMidiMapping)
         DEF_INTERFACE (IUnitInfo)
 	END_DEFINE_INTERFACES (EditController)
     DELEGATE_REFCOUNT (EditController)

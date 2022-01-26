@@ -155,7 +155,7 @@ tresult PLUGIN_API DemonProController::initialize (FUnknown* context)
 
     // Demon 2: Pitch
     param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Pitch"), USTRING("semitones"), 0, DEMON1_PITCH_DEFAULT_N, ParameterInfo::kCanAutomate, kDemon1PitchId, DEMON_PITCH_MIN, DEMON_PITCH_MAX);
-    param->setNormalized(DEMON0_PITCH_DEFAULT_N);
+    param->setNormalized(DEMON1_PITCH_DEFAULT_N);
     param->setPrecision(2);
     param->setUnitID(DemonProDemon1UnitId);
     parameters.addParameter(param);
@@ -190,7 +190,7 @@ tresult PLUGIN_API DemonProController::initialize (FUnknown* context)
 
     // Demon 3: Pitch
     param = new Steinberg::Vst::mda::ScaledParameter(USTRING("Pitch"), USTRING("semitones"), 0, DEMON2_PITCH_DEFAULT_N, ParameterInfo::kCanAutomate, kDemon2PitchId, DEMON_PITCH_MIN, DEMON_PITCH_MAX);
-    param->setNormalized(DEMON0_PITCH_DEFAULT_N);
+    param->setNormalized(DEMON2_PITCH_DEFAULT_N);
     param->setPrecision(2);
     param->setUnitID(DemonProDemon2UnitId);
     parameters.addParameter(param);
@@ -240,7 +240,6 @@ tresult PLUGIN_API DemonProController::setComponentState (IBStream* state)
     }
 
     setParamNormalized(kBypassId, savedBypass ? 1 : 0);
-
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 5; j++) {
