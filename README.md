@@ -1,6 +1,7 @@
 DemonPro
 ========
 
+![Screenshot showing the plugin](doc/screenshot.png?raw=true "DemonPro")
 
 License
 -------
