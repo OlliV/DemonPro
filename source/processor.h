@@ -40,8 +40,6 @@ public:
 	/** Asks if a given sample size is supported see SymbolicSampleSizes. */
 	Steinberg::tresult PLUGIN_API canProcessSampleSize (Steinberg::int32 symbolicSampleSize) SMTG_OVERRIDE;
 
-    /** Bus arrangement managing: in this example the 'again' will be mono for mono input/output and
-     * stereo for other arrangements. */
     Steinberg::tresult PLUGIN_API setBusArrangements (Steinberg::Vst::SpeakerArrangement* inputs,
                                                       Steinberg::int32 numIns,
                                                       Steinberg::Vst::SpeakerArrangement* outputs,
